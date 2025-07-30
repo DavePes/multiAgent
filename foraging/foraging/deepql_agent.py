@@ -1,3 +1,4 @@
+import numpy as np
 import random
 import foraging
 import torch
@@ -16,7 +17,6 @@ parser.add_argument("--gamma", default=0.99, type=float, help="Discounting facto
 parser.add_argument("--hidden_layer_size", default=256, type=int, help="Size of hidden layer.")
 parser.add_argument("--learning_rate", default=0.0001, type=float, help="Learning rate.")
 parser.add_argument("--target_tau", default=0.001, type=float, help="Target network update weight.")
-#npfl139.update_params_by_ema(self._target_critic1, self._critic1, self.tau)
 class Network(torch.nn.Module):
     def __init__(self, input_size, action_space,args):
         self._model = self.create_network(input_size, action_space,args)
@@ -47,11 +47,10 @@ class Network(torch.nn.Module):
                 target_param.mul_(1 - tau)
                 target_param.add_(source_param, alpha=tau)
 
-    def train(self, ):
+    def train(self,q_values,next_q_values):
         self._model.train()
         self._optimizer.zero_grad()
-        predictions = self._model(states)
-        loss = self._loss(predictions, targets)
+        loss = self._loss(q_values, next_q_values)
         loss.backward()
         with torch.no_grad():
             self._optimizer.step()
@@ -81,7 +80,6 @@ class ExampleAgent:
 
 def main(env: foraging.ForagingEnvironment, args: argparse.Namespace) -> None:
 
-
     # Construct the network
     Transition = collections.namedtuple("Transition", ["state", "action", "reward", "done", "next_state"])
     network = Network(env.h * env.w, 4, args)  # Assuming 4 possible actions (up, down, left, right)
@@ -90,11 +88,16 @@ def main(env: foraging.ForagingEnvironment, args: argparse.Namespace) -> None:
         state = env.reset()
         R = 0
         while not env.done():
-            reward, *state = env.perform_actions(agent.action(state))
+            if (np.random.rand() < args.epsilon):
+                action = random.randrange(0, 4)
+            else:
+                action = np.argmax(network.predict(torch.tensor(state[0]).float().flatten()))
+            reward, *next_state = env.perform_actions(agent.action(state))
             agent.reward(reward)
             R += reward
             
             replay_buffer.append(Transition(state, action, reward, done, next_state))
+            state = next_state
         print(f'Finished with reward: {R}')
     
 
