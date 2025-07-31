@@ -47,10 +47,11 @@ class Network(torch.nn.Module):
                 target_param.mul_(1 - tau)
                 target_param.add_(source_param, alpha=tau)
 
-    def train(self,q_values,next_q_values):
+    def train(self,states,next_q_values):
         self._model.train()
+        predictions = self._model(states)
         self._optimizer.zero_grad()
-        loss = self._loss(q_values, next_q_values)
+        loss = self._loss(predictions, next_q_values)
         loss.backward()
         with torch.no_grad():
             self._optimizer.step()
@@ -88,10 +89,12 @@ def main(env: foraging.ForagingEnvironment, args: argparse.Namespace) -> None:
         state = env.reset()
         R = 0
         while not env.done():
-            if (np.random.rand() < args.epsilon):
-                action = random.randrange(0, 4)
+            q_values = network.predict(state[np.newaxis])[0]
+            if np.random.uniform() < args.epsilon:
+                action = np.random.randint(env.action_space.n)
             else:
-                action = np.argmax(network.predict(torch.tensor(state[0]).float().flatten()))
+                action = np.argmax(q_values)
+                
             reward, *next_state = env.perform_actions(agent.action(state))
             agent.reward(reward)
             R += reward
