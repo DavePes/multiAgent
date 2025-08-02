@@ -74,7 +74,24 @@ class ForagingEnvironment:
             self.world[ob_x][ob_y] = ob_l
 
         return reward - 0.1 # 0.1 is penalty for each step
+    def perform_one_action(self, action, agent_index):
+        # apply one action in the environment (move agent and collect objects)
+        ag_x, ag_y = self.agent_locations[agent_index]
+        nag_x, nag_y = ag_x, ag_y
+        if action == NORTH:
+            nag_x = max(ag_x - 1, 0)
+        if action == SOUTH:
+            nag_x = min(ag_x + 1, self.h - 1)
+        if action == WEST:
+            nag_y = max(ag_y - 1, 0)
+        if action == EAST:
+            nag_y = min(ag_y + 1, self.w - 1)
 
+        self.agent_locations[0] = [nag_x, nag_y]
+        
+
+        r = self._update_world()
+        return r, copy.deepcopy(self.world), copy.deepcopy(self.agent_locations)
     # apply the agents' actions in the environment (move agents and collect objects)
     def perform_actions(self, actions):
         nag_loc = []
