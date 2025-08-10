@@ -1,0 +1,13 @@
+Finished with reward: -48.000000000000405, episode number: 1
+Finished with reward: -43.00000000000041, episode number: 2
+Finished with reward: -40.000000000000355, episode number: 3
+Finished with reward: -41.000000000000355, episode number: 4
+Finished with reward: -38.00000000000027, episode number: 5
+Finished with reward: -49.000000000000426, episode number: 6
+Finished with reward: -41.00000000000034, episode number: 7
+Finished with reward: -49.000000000000426, episode number: 8
+Finished with reward: -44.00000000000036, episode number: 9
+Finished with reward: -42.00000000000031, episode number: 10
+Finished with reward: -43.000000000000334, episode number: 11
+Finished with reward: -41.00000000000031, episode number: 12
+Finished with reward: -48.00000000000041, episode number: 13

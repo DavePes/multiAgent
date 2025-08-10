@@ -15,7 +15,6 @@ class ForagingEnvironment:
         self.w = w
         self.objects = objects
         self.agents = agents
-        
         self.reset()
 
     # reset the environment (generate a new one) and return as a state
@@ -46,9 +45,15 @@ class ForagingEnvironment:
                 self.agent_locations.append([i, j])
 
         self.history = [(copy.deepcopy(self.world), 0)]
-
         return copy.deepcopy(self.world), copy.deepcopy(self.agent_locations)
-
+    
+    def _update_world_one_action(self, ag_x, ag_y,torch_state, offset, agent_index,max_size):  
+        # update the world after moving one agent
+        index = offset + agent_index * 2
+        torch_state[index] = ag_x / max_size  # normalize
+        torch_state[index + 1] = ag_y / max_size # normalize
+        return torch_state
+ 
     # update the world after moving the agents
     def _update_world(self):
         self.steps += 1
@@ -74,9 +79,9 @@ class ForagingEnvironment:
             self.world[ob_x][ob_y] = ob_l
 
         return reward - 0.1 # 0.1 is penalty for each step
-    def perform_one_action(self, action, agent_index):
+    def perform_one_action(self, action,torch_state,offset,permuted_indices, agent_index,max_size):
         # apply one action in the environment (move agent and collect objects)
-        ag_x, ag_y = self.agent_locations[agent_index]
+        ag_x, ag_y = self.agent_locations[permuted_indices[agent_index]]
         nag_x, nag_y = ag_x, ag_y
         if action == NORTH:
             nag_x = max(ag_x - 1, 0)
@@ -86,12 +91,8 @@ class ForagingEnvironment:
             nag_y = max(ag_y - 1, 0)
         if action == EAST:
             nag_y = min(ag_y + 1, self.w - 1)
-
-        self.agent_locations[0] = [nag_x, nag_y]
-        
-
-        r = self._update_world()
-        return r, copy.deepcopy(self.world), copy.deepcopy(self.agent_locations)
+        temp_world = self._update_world_one_action(nag_x,nag_y,torch_state,offset,agent_index,max_size)
+        return temp_world
     # apply the agents' actions in the environment (move agents and collect objects)
     def perform_actions(self, actions):
         nag_loc = []
@@ -112,7 +113,7 @@ class ForagingEnvironment:
 
         r = self._update_world()
 
-        self.history.append((copy.deepcopy(self.world), r))
+        #self.history.append((copy.deepcopy(self.world), r))
 
         return r, copy.deepcopy(self.world), copy.deepcopy(self.agent_locations)
 

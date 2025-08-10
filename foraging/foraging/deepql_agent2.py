@@ -86,20 +86,23 @@ def prepare_state(state, max_size,maximum_agents,permuted_indices):
 def main(env: foraging.ForagingEnvironment, args: argparse.Namespace) -> None:
 
     # Construct the network
-    Transition = collections.namedtuple("Transition", ["state", "action", "reward", "done", "next_state"])
+    Transition = collections.namedtuple("Transition", ["state", "action", "reward", "done", "next_state","i"])
     MAXIMUM_AGENTS = 20
     ## normalize change to bigger something like 20*20
-    MAX_SIZE = 5
+    MAX_SIZE = 20
     ACTION_SPACE = 4  # Number of actions
     # it is temporary env.h * env.w it should be changed to max_size * max_size
-    network = Network(env.h * env.w + MAXIMUM_AGENTS*2 + MAXIMUM_AGENTS, ACTION_SPACE, args) 
-    target =  Network(env.h * env.w + MAXIMUM_AGENTS*2 + MAXIMUM_AGENTS, ACTION_SPACE, args)
     replay_buffer = rb.MonolithicReplayBuffer(600_000)
     actions = [0] * env.agents
+    networks = [] * MAXIMUM_AGENTS
+    target_networks = [] * MAXIMUM_AGENTS
+    for i in range(MAXIMUM_AGENTS):
+        networks[i] =        Network(env.h * env.w + MAXIMUM_AGENTS*2 + MAXIMUM_AGENTS, ACTION_SPACE, args) 
+        target_networks[i] = Network(env.h * env.w + MAXIMUM_AGENTS*2 + MAXIMUM_AGENTS, ACTION_SPACE, args) 
     f = open("output.txt",'w')
     for ep in range(args.episodes): 
         state = env.reset()
-        permuted_indices = torch.arange(env.agents) #torch.randperm(env.agents)
+        permuted_indices = torch.randperm(env.agents)
         torch_state,grid_tensor = prepare_state(state, MAX_SIZE, MAXIMUM_AGENTS, permuted_indices)
         R = 0
         while not env.done():
@@ -110,7 +113,7 @@ def main(env: foraging.ForagingEnvironment, args: argparse.Namespace) -> None:
                 if np.random.uniform() < args.epsilon:
                     action = np.random.randint(ACTION_SPACE)
                 else:
-                    q_values = network.predict(torch_state[np.newaxis])[0]
+                    q_values = networks[permuted_indices[i]].predict(torch_state[np.newaxis])[0]
                     action = np.argmax(q_values)
                 actions[permuted_indices[i]] = action
                 every_agent_state.append(torch_state.clone())
@@ -118,14 +121,14 @@ def main(env: foraging.ForagingEnvironment, args: argparse.Namespace) -> None:
                 torch_state = new_torch_state
             reward, *next_state = env.perform_actions(actions)
             # compute next_torch_state
-            next_permuted_indices = torch.arange(env.agents) #torch.randperm(env.agents)
+            next_permuted_indices = torch.randperm(env.agents)
             next_torch_state, next_grid_tensor = prepare_state(next_state, MAX_SIZE, MAXIMUM_AGENTS, next_permuted_indices)
             # Compute per-agent reward
             per_agent_reward = reward / env.agents
             ## REPLAY BUFFER APPEND
             ## add into transition next attribute (whole_game_state and grid)
             for i in range(env.agents):
-                replay_buffer.append(Transition(state=every_agent_state[i], action=actions[permuted_indices[i]], reward=per_agent_reward, done=env.done(), next_state=next_torch_state))
+                replay_buffer.append(Transition(state=every_agent_state[i], action=actions[permuted_indices[i]], reward=per_agent_reward, done=env.done(), next_state=next_torch_state,i=i))
             if len(replay_buffer) >= args.train_start:
                 states, actions, rewards, dones, next_states = replay_buffer.sample(args.batch_size)
                 # Convert to tensors
