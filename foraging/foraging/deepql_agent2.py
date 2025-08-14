@@ -80,20 +80,18 @@ def prepare_state(state, max_size,maximum_agents,permuted_indices):
         agents_loc_tensor[index*2 + 1] = pair[1]
     agents_loc_tensor = agents_loc_tensor / max_size  # normalize
     # Create a tensor for the agent ID
-    agent_id = torch.nn.functional.one_hot(torch.tensor(0),num_classes = maximum_agents).float()
-    return torch.cat([grid_tensor, agents_loc_tensor, agent_id]),grid_tensor
+    agent_id_one_hot = torch.nn.functional.one_hot(torch.tensor(0),num_classes = maximum_agents).float()
+    return torch.cat([grid_tensor, agents_loc_tensor, agent_id_one_hot]),grid_tensor
     
 def main(env: foraging.ForagingEnvironment, args: argparse.Namespace) -> None:
 
     # Construct the network
-    Transition = collections.namedtuple("Transition", ["state", "action", "reward", "done", "next_state"])
+    Transition = collections.namedtuple("Transition", ["state", "action", "reward", "done", "next_state","agent_id"])
     MAXIMUM_AGENTS = 20
     ## normalize change to bigger something like 20*20
     MAX_SIZE = 5
     ACTION_SPACE = 4  # Number of actions
     # it is temporary env.h * env.w it should be changed to max_size * max_size
-    network = Network(env.h * env.w + MAXIMUM_AGENTS*2 + MAXIMUM_AGENTS, ACTION_SPACE, args) 
-    target =  Network(env.h * env.w + MAXIMUM_AGENTS*2 + MAXIMUM_AGENTS, ACTION_SPACE, args)
     networks = [Network(env.h * env.w + MAXIMUM_AGENTS*2 + MAXIMUM_AGENTS, ACTION_SPACE, args) for _ in range(env.agents)]
     target_networks = [Network(env.h * env.w + MAXIMUM_AGENTS*2 + MAXIMUM_AGENTS, ACTION_SPACE, args) for _ in range(env.agents)]
     replay_buffer = rb.MonolithicReplayBuffer(600_000)
@@ -107,12 +105,12 @@ def main(env: foraging.ForagingEnvironment, args: argparse.Namespace) -> None:
         while not env.done():
             every_agent_state = []
             for i in range(env.agents):
-                agent_id = torch.nn.functional.one_hot(torch.tensor(i),num_classes = MAXIMUM_AGENTS)
-                torch_state[-MAXIMUM_AGENTS:] = agent_id.float()
+                agent_id_one_hot = torch.nn.functional.one_hot(torch.tensor(i),num_classes = MAXIMUM_AGENTS)
+                torch_state[-MAXIMUM_AGENTS:] = agent_id_one_hot.float()
                 if np.random.uniform() < args.epsilon:
                     action = np.random.randint(ACTION_SPACE)
                 else:
-                    q_values = network.predict(torch_state[np.newaxis])[0]
+                    q_values = networks[i].predict(torch_state[np.newaxis])[0]
                     action = np.argmax(q_values)
                 actions[permuted_indices[i]] = action
                 every_agent_state.append(torch_state.clone())
@@ -127,20 +125,22 @@ def main(env: foraging.ForagingEnvironment, args: argparse.Namespace) -> None:
             ## REPLAY BUFFER APPEND
             ## add into transition next attribute (whole_game_state and grid)
             for i in range(env.agents):
-                replay_buffer.append(Transition(state=every_agent_state[i], action=actions[permuted_indices[i]], reward=per_agent_reward, done=env.done(), next_state=next_torch_state))
+                ## check if every_agent_state is right!!
+                replay_buffer.append(Transition(state=every_agent_state[permuted_indices[i]], action=actions[permuted_indices[i]], reward=per_agent_reward, done=env.done(), next_state=next_torch_state,agent_id=permuted_indices[i]))
             if len(replay_buffer) >= args.train_start:
-                states, actions, rewards, dones, next_states = replay_buffer.sample(args.batch_size)
+                states, actions, rewards, dones, next_states,agent_id = replay_buffer.sample(args.batch_size)
                 # Convert to tensors
                 states      = torch.from_numpy(states).float().to(Network.device)
                 actions     = torch.from_numpy(actions).long().to(Network.device)        # Use long for indexing
                 rewards     = torch.from_numpy(rewards).float().to(Network.device)
                 dones       = torch.from_numpy(dones).float().to(Network.device)
                 next_states = torch.from_numpy(next_states).float().to(Network.device)
-                next_q_values = target.predict(next_states)
-                targets = network.predict(states)
+                agent_id = torch.from_numpy(agent_id).long().to(Network.device)
+                next_q_values = target_networks[agent_id].predict(next_states)
+                targets = networks[agent_id].predict(states)
                 
                 targets[torch.arange(args.batch_size),actions] = rewards + args.gamma * torch.max(next_q_values,dim=1)[0] * (1 - dones.int())
-                network.train(states, targets, target._model,network._model)
+                networks[agent_id].train(states, targets, target_networks[agent_id]._model,networks[agent_id]._model)
                 # update state,grid,permuted_indices
                 torch_state = next_torch_state
                 grid_tensor = next_grid_tensor
