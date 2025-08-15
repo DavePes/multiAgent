@@ -96,6 +96,13 @@ def main(env: foraging.ForagingEnvironment, args: argparse.Namespace) -> None:
     target_networks = np.array([Network(env.h * env.w + MAXIMUM_AGENTS*2 + MAXIMUM_AGENTS, ACTION_SPACE, args) for _ in range(env.agents)],dtype=object)
     replay_buffer = rb.MonolithicReplayBuffer(600_000)
     actions = [0] * env.agents
+    def predict_wrapper(network, state):
+        torch_state = torch.tensor(state, dtype=torch.float32).to(Network.device)
+        return network.predict(torch_state)  # Assumes predict takes a single state
+
+    # Vectorize it (specify output type if needed, e.g., otypes=[float])
+    vectorized_predict = np.vectorize(predict_wrapper)
+
     f = open("output.txt",'w')
     for ep in range(args.episodes): 
         state = env.reset()
@@ -134,8 +141,10 @@ def main(env: foraging.ForagingEnvironment, args: argparse.Namespace) -> None:
                 actions     = torch.from_numpy(actions).long().to(Network.device)        # Use long for indexing
                 rewards     = torch.from_numpy(rewards).float().to(Network.device)
                 dones       = torch.from_numpy(dones).float().to(Network.device)
-                next_states = torch.from_numpy(next_states).float().to(Network.device)
-                next_q_values = target_networks[agent_ids].predict(next_states)
+                #next_states = torch.from_numpy(next_states).float().to(Network.device)
+                next_q_values = vectorized_predict(target_networks[agent_ids], next_states)
+
+                #next_q_values = target_networks[agent_ids].predict(next_states)
                 targets = networks[agent_ids].predict(states)
                 
                 targets[torch.arange(args.batch_size),actions] = rewards + args.gamma * torch.max(next_q_values,dim=1)[0] * (1 - dones.int())
