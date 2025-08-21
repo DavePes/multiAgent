@@ -105,6 +105,7 @@ def main(env: foraging.ForagingEnvironment, args: argparse.Namespace) -> None:
         while not env.done():
             every_agent_state = []
             for i in range(env.agents):
+                ## pozn david checknout jestli se torch_state skutecne meni, protoze pouzivame permuted_actionz
                 agent_id = torch.nn.functional.one_hot(torch.tensor(i),num_classes = MAXIMUM_AGENTS)
                 torch_state[-MAXIMUM_AGENTS:] = agent_id.float()
                 if np.random.uniform() < args.epsilon:
