@@ -79,9 +79,9 @@ class ForagingEnvironment:
             self.world[ob_x][ob_y] = ob_l
 
         return reward - 0.1 # 0.1 is penalty for each step
-    def perform_one_action(self, action,torch_state,offset,permuted_indices, agent_index,max_size):
+    def perform_one_action(self, action,torch_state,offset, agent_index,max_size):
         # apply one action in the environment (move agent and collect objects)
-        ag_x, ag_y = self.agent_locations[permuted_indices[agent_index]]
+        ag_x, ag_y = self.agent_locations[agent_index]
         nag_x, nag_y = ag_x, ag_y
         if action == NORTH:
             nag_x = max(ag_x - 1, 0)

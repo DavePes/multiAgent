@@ -1,0 +1,1 @@
+Finished with reward: -50.00000000000044, episode number: 1
