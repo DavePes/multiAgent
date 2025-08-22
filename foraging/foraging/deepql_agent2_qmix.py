@@ -44,20 +44,20 @@ class MixingNetwork(torch.nn.Module):
             torch.nn.ReLU(),
             torch.nn.Linear(hidden_dim, 1)
         )
-        def forward(self, q_values, global_state):  # q_values: (batch_size, maximum_agents), global_state: (batch_size, state_dim)
-            batch_size = q_values.size(0)
-            
-            # Layer 1
-            w1 = torch.abs(self.hyper_w1(global_state)).view(batch_size, self.num_agents, self.hidden_dim)
-            b1 = self.hyper_b1(global_state).view(batch_size, 1, self.hidden_dim)
-            hidden = F.elu(torch.bmm(q_values.unsqueeze(1), w1) + b1)  # (batch_size, 1, hidden_dim)
-            
-            # Layer 2
-            w2 = torch.abs(self.hyper_w2(global_state)).view(batch_size, self.hidden_dim, 1)
-            b2 = self.hyper_b2(global_state).view(batch_size, 1, 1)
-            q_tot = torch.bmm(hidden, w2) + b2  # (batch_size, 1, 1)
-            
-            return q_tot.squeeze(2)  # (batch_size, 1)
+    def forward(self, q_values, global_state):  # q_values: (batch_size, maximum_agents), global_state: (batch_size, state_dim)
+        batch_size = q_values.size(0)
+        
+        # Layer 1
+        w1 = torch.abs(self.hyper_w1(global_state)).view(batch_size, self.num_agents, self.hidden_dim)
+        b1 = self.hyper_b1(global_state).view(batch_size, 1, self.hidden_dim)
+        hidden = F.elu(torch.bmm(q_values.unsqueeze(1), w1) + b1)  # (batch_size, 1, hidden_dim)
+        
+        # Layer 2
+        w2 = torch.abs(self.hyper_w2(global_state)).view(batch_size, self.hidden_dim, 1)
+        b2 = self.hyper_b2(global_state).view(batch_size, 1, 1)
+        q_tot = torch.bmm(hidden, w2) + b2  # (batch_size, 1, 1)
+        
+        return q_tot.squeeze(2)  # (batch_size, 1)
 class Network():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -132,9 +132,11 @@ def main(args: argparse.Namespace) -> None:
     
     env = foraging.ForagingEnvironment(WIDTH, HEIGHT, OBJECTS, AGENTS)
     # Construct the network
+    # we suppose no permutation!!!
+    # also we need to track all actions of each agent!!
     #every_agent_state = every_agent_state,
     #  "every_agent_state"
-    Transition = collections.namedtuple("Transition", ["state", "action", "reward", "done", "next_state", "original_state","every_agent_state","agents"])
+    Transition = collections.namedtuple("Transition", ["state", "action", "reward", "done", "next_state", "original_state","every_agent_state","agents","every_agent_action"])
     MAXIMUM_AGENTS = 20
     ## normalize change to bigger something like 20*20
     MAX_SIZE = 5
@@ -184,18 +186,28 @@ def main(args: argparse.Namespace) -> None:
                                                 reward=per_agent_reward, done=env.done(), next_state=next_torch_state, 
                                                 original_state=torch_state,
                                                 every_agent_state = every_agent_state,
-                                                agents=env.agents))
+                                                agents=env.agents,
+                                                every_agent_action=actions))
             if len(replay_buffer) >= args.train_start:
-                states, actions, rewards, dones, next_states = replay_buffer.sample(args.batch_size)
+                states, actions, rewards, dones, next_states,every_agent_state,agents = replay_buffer.sample(args.batch_size)
                 # Convert to tensors
                 states      = torch.from_numpy(states).float().to(Network.device)
                 actions     = torch.from_numpy(actions).long().to(Network.device)        # Use long for indexing
                 rewards     = torch.from_numpy(rewards).float().to(Network.device)
                 dones       = torch.from_numpy(dones).float().to(Network.device)
                 next_states = torch.from_numpy(next_states).float().to(Network.device)
+                every_agent_state = torch.from_numpy(every_agent_state).float().to(Network.device)
+                original_state = torch.from_numpy(original_state).float().to(Network.device)
+                number_of_agents = torch.from_numpy(agents).int().to(Network.device)
+                every_agent_action = torch.from_numpy(every_agent_action).long().to(Network.device)
                 # Compute q_mix
                 
                 next_q_values = target.predict(next_states)
+                # Compute
+                q_values_all_agents = network.predict(every_agent_state)
+                # pad
+
+                q_tot = q_mix(q_values_all_agents, original_state)
                 targets = network.predict(states)
                 
                 targets[torch.arange(args.batch_size),actions] = rewards + args.gamma * torch.max(next_q_values,dim=1)[0] * (1 - dones.int())
