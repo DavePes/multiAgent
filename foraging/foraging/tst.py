@@ -292,7 +292,6 @@ class QMix_Trainer():
                           hidden_dim, hypernet_dim).to(device)
         self.target_mixer = QMix(state_dim, n_agents, action_shape,
                           hidden_dim, hypernet_dim).to(device)
-        
         self._update_targets()
         self.update_cnt = 0
         

@@ -107,18 +107,17 @@ class Network():
         with torch.no_grad():
             return self._model(x)
     
-def prepare_state(state, max_size,maximum_agents,permuted_indices):
+def prepare_state(state, max_size,maximum_agents):
     # Flatten the grid
     flat_grid = [cell for row in state[0] for cell in row]
     # Convert to tensors
     grid_tensor = torch.tensor(flat_grid, dtype=torch.float32) / maximum_agents # normalize  
     # Create a tensor for agent locations
     agents_loc_tensor = -torch.ones(maximum_agents * 2, dtype=torch.float32)
-    # Flatten the agent locations,normalize and permute agents location
+    # Flatten the agent locations,normalize
     for i,pair in enumerate(state[1]):
-        index = permuted_indices[i]
-        agents_loc_tensor[index*2] = pair[0]
-        agents_loc_tensor[index*2 + 1] = pair[1]
+        agents_loc_tensor[i*2] = pair[0]
+        agents_loc_tensor[i*2 + 1] = pair[1]
     agents_loc_tensor = agents_loc_tensor / max_size  # normalize
     # Create a tensor for the agent ID
     agent_id = torch.nn.functional.one_hot(torch.tensor(0),num_classes = maximum_agents).float()
@@ -132,8 +131,6 @@ def main(args: argparse.Namespace) -> None:
     
     env = foraging.ForagingEnvironment(WIDTH, HEIGHT, OBJECTS, AGENTS)
     # Construct the network
-    # we suppose no permutation!!!
-    # also we need to track all actions of each agent!!
     #every_agent_state = every_agent_state,
     #  "every_agent_state"
     Transition = collections.namedtuple("Transition", ["state", "action", "reward", "done", "next_state", "original_state","every_agent_state","agents","every_agent_action"])
@@ -156,11 +153,11 @@ def main(args: argparse.Namespace) -> None:
     for ep in range(args.episodes): 
 
         state = env.reset()
-        permuted_indices = torch.arange(env.agents) #torch.randperm(env.agents)
-        torch_state,grid_tensor = prepare_state(state, MAX_SIZE, MAXIMUM_AGENTS, permuted_indices)
+        torch_state,grid_tensor = prepare_state(state, MAX_SIZE, MAXIMUM_AGENTS)
         R = 0
         while not env.done():
             every_agent_state = torch.zeros((env.agents, STATE_DIM), dtype=torch.float32)
+            
             for i in range(env.agents):
                 agent_id = torch.nn.functional.one_hot(torch.tensor(i),num_classes = MAXIMUM_AGENTS)
                 torch_state[-MAXIMUM_AGENTS:] = agent_id.float()
@@ -169,20 +166,19 @@ def main(args: argparse.Namespace) -> None:
                     action = np.random.randint(ACTION_SPACE)
                 else:
                     action = np.argmax(q_values)
-                actions[permuted_indices[i]] = action
+                actions[i] = action
                 every_agent_state[i] = torch_state.clone()
-                new_torch_state = env.perform_one_action(action,torch_state,grid_tensor.numel(),permuted_indices,i,MAX_SIZE)
+                new_torch_state = env.perform_one_action(action,torch_state,grid_tensor.numel(),i,MAX_SIZE)
                 torch_state = new_torch_state
             reward, *next_state = env.perform_actions(actions)
             # compute next_torch_state
-            next_permuted_indices = torch.arange(env.agents) #torch.randperm(env.agents)
-            next_torch_state, next_grid_tensor = prepare_state(next_state, MAX_SIZE, MAXIMUM_AGENTS, next_permuted_indices)
+            next_torch_state, next_grid_tensor = prepare_state(next_state, MAX_SIZE, MAXIMUM_AGENTS)
             # Compute per-agent reward
             per_agent_reward = reward / env.agents
             ## REPLAY BUFFER APPEND
             ## add into transition next attribute (whole_game_state and grid)
             for i in range(env.agents):
-                replay_buffer.append(Transition(state=every_agent_state[i], action=actions[permuted_indices[i]], 
+                replay_buffer.append(Transition(state=every_agent_state[i], action=actions[i], 
                                                 reward=per_agent_reward, done=env.done(), next_state=next_torch_state, 
                                                 original_state=torch_state,
                                                 every_agent_state = every_agent_state,
@@ -212,10 +208,9 @@ def main(args: argparse.Namespace) -> None:
                 
                 targets[torch.arange(args.batch_size),actions] = rewards + args.gamma * torch.max(next_q_values,dim=1)[0] * (1 - dones.int())
                 network.train(states, targets, target._model,network._model)
-                # update state,grid,permuted_indices
+                # update state,grid
                 torch_state = next_torch_state
                 grid_tensor = next_grid_tensor
-                permuted_indices = next_permuted_indices
             R += reward
         log_message = f'Finished with reward: {R}, episode number: {ep+1}\n'
         f.write(log_message)
