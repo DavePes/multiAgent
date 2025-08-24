@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Finished with reward: -43.000000000000334, episode number: 1
 Finished with reward: -42.000000000000426, episode number: 2
 Finished with reward: -45.00000000000044, episode number: 3
@@ -143,3 +144,6 @@ Finished with reward: -41.000000000000306, episode number: 142
 Finished with reward: -35.00000000000025, episode number: 143
 Finished with reward: -34.00000000000018, episode number: 144
 Finished with reward: -38.00000000000027, episode number: 145
+=======
+Finished with reward: -50.00000000000044, episode number: 1
+>>>>>>> 55ebe28e4e302295895e4defc892979290b70760
