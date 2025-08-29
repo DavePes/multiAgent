@@ -5,36 +5,40 @@ import torch
 import argparse
 import collections
 import replay_buffer as rb
+import global_initilizers as global_init
 parser = argparse.ArgumentParser()
 parser.add_argument("--threads", default=5, type=int, help="Maximum number of threads to use.")
 parser.add_argument("--batch_size", default=256, type=int, help="Batch size.")
 parser.add_argument("--train_start", default=5000, type=int, help="When to start training.")
 parser.add_argument("--episodes", default=40000, type=int, help="Number of episodes.")
-parser.add_argument("--epsilon", default=0.2, type=float, help="Exploration factor.")
+parser.add_argument("--epsilon", default=0.7, type=float, help="Exploration factor.")
 parser.add_argument("--epsilon_final", default=0.03, type=float, help="Final exploration factor.")
 parser.add_argument("--epsilon_final_at", default=1000, type=int, help="Training episodes.")
 parser.add_argument("--gamma", default=0.99, type=float, help="Discounting factor.")
-parser.add_argument("--hidden_layer_size", default=256, type=int, help="Size of hidden layer.")
-parser.add_argument("--learning_rate", default=0.0004, type=float, help="Learning rate.")
-parser.add_argument("--target_tau", default=0.0009, type=float, help="Target network update weight.")
+parser.add_argument("--hidden_layer_size", default=512, type=int, help="Size of hidden layer.")
+parser.add_argument("--learning_rate", default=0.00005, type=float, help="Learning rate.")
+parser.add_argument("--target_tau", default=0.0001, type=float, help="Target network update weight.")
 class Network():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    def __init__(self, input_size, ACTION_SPACE,args):
+    def __init__(self, ACTION_SPACE,args):
         self.args = args
-        self._model = self.create_network(input_size, ACTION_SPACE)
+        self._model = self.create_network(ACTION_SPACE).to(self.device)
         self._optimizer = torch.optim.Adam(self._model.parameters(), lr=args.learning_rate)
         self._loss = torch.nn.MSELoss()
         self.tau = args.target_tau
 
-    def create_network(self, input_size, ACTION_SPACE):
+    def create_network(self, ACTION_SPACE):
         """Create a neural network with the specified input size and action space."""
         return torch.nn.Sequential(
-            torch.nn.Linear(input_size, self.args.hidden_layer_size),
-            torch.nn.ReLU(),
-            torch.nn.Linear(self.args.hidden_layer_size, self.args.hidden_layer_size),
-            torch.nn.ReLU(),
-            torch.nn.Linear(self.args.hidden_layer_size, ACTION_SPACE),
+        torch.nn.LazyConv2d(32, kernel_size=3, stride=1, padding=1), 
+        torch.nn.ReLU(),
+        torch.nn.LazyConv2d(32, kernel_size=3, stride=1, padding=1),
+        torch.nn.ReLU(),
+        torch.nn.Flatten(),
+        torch.nn.LazyLinear(self.args.hidden_layer_size),  # Lazy from flattened
+        torch.nn.ReLU(),
+        torch.nn.Linear(self.args.hidden_layer_size, ACTION_SPACE),
         ).to(self.device)
     
     def update_params_by_ema(self,target: torch.nn.Module, source: torch.nn.Module) -> None:
@@ -56,6 +60,8 @@ class Network():
         self._optimizer.zero_grad()
         loss = self._loss(predictions, next_q_values)
         loss.backward()
+        # Gradient clipping - prevents exploding gradients
+        torch.nn.utils.clip_grad_norm_(self._model.parameters(), max_norm=1.0)
         with torch.no_grad():
             self._optimizer.step()
         self.update_params_by_ema(target,model)
@@ -66,64 +72,69 @@ class Network():
         with torch.no_grad():
             return self._model(x)
     
-def prepare_state(state, max_size,maximum_agents):
-    # Flatten the grid
-    flat_grid = [cell for row in state[0] for cell in row]
-    # Convert to tensors
-    grid_tensor = torch.tensor(flat_grid, dtype=torch.float32) / maximum_agents # normalize  
-    # Create a tensor for agent locations
-    agents_loc_tensor = -torch.ones(maximum_agents * 2, dtype=torch.float32)
-    # Flatten the agent locations,normalize
-    for i,pair in enumerate(state[1]):
-        agents_loc_tensor[i*2] = pair[0]
-        agents_loc_tensor[i*2 + 1] = pair[1]
-    agents_loc_tensor = agents_loc_tensor / max_size  # normalize
-    # Create a tensor for the agent ID
-    agent_id = torch.nn.functional.one_hot(torch.tensor(0),num_classes = maximum_agents).float()
-    return torch.cat([grid_tensor, agents_loc_tensor, agent_id]),grid_tensor,agents_loc_tensor
+def prepare_state(agents_loc,objects_loc,torch_state,maximum_agents):
+    # clear torch_state
+    torch_state.zero_()
+    # 1 channel for active agents
+    for ag_loc in agents_loc:
+        ag_x,ag_y = ag_loc
+        torch_state[0][ag_x][ag_y] += 1
+    # 4 channel for objects
+    for ob_loc in objects_loc:
+        ob_x,ob_y,ob_val = ob_loc
+        if (torch_state[3][ob_x][ob_y] != 0):
+            print("overlapping objects")
+        torch_state[3][ob_x][ob_y] = ob_val
+    # normalize
+    torch_state /= maximum_agents
+    return torch_state
 
 def are_we_closer(ag_x,ag_y,nag_x,nag_y,objs_loc):
     for obj_loc in objs_loc:
         old_d = np.abs(ag_x-obj_loc[0]) + np.abs(ag_y-obj_loc[1])
         new_d = np.abs(nag_x-obj_loc[0]) + np.abs(nag_y-obj_loc[1])
-        if (new_d < old_d):
+        if (new_d <= old_d):
             return True
     return False
 def main(args: argparse.Namespace) -> None:
-
+    global_init.global_keras_initializers()
     threads = args.threads
     if threads is not None and threads > 0:
         if torch.get_num_threads() != threads:
             torch.set_num_threads(threads)
         if torch.get_num_interop_threads() != threads:
             torch.set_num_interop_threads(threads)
-    WIDTH = 5
-    HEIGHT = 5
-    OBJECTS = 5
-    AGENTS = 5
-    MAXIMUM_AGENTS = 20
-    ## normalize change to bigger something like 20*20
-    MAX_SIZE = 5
+
+    MAX_WIDTH = 6
+    MAX_HEIGHT = 6
+    MAX_AGENTS = 5
     ACTION_SPACE = 4  # Number of actions
-    env = foraging.ForagingEnvironment(WIDTH, HEIGHT, OBJECTS, AGENTS)
+    MAX_OBJECTS = 6
     Transition = collections.namedtuple("Transition", ["state", "action", "reward", "done", "next_state"])
     # it is temporary env.h * env.w it should be changed to max_size * max_size
-    network = Network(env.h * env.w + MAXIMUM_AGENTS*2 + MAXIMUM_AGENTS, ACTION_SPACE, args) 
-    target =  Network(env.h * env.w + MAXIMUM_AGENTS*2 + MAXIMUM_AGENTS, ACTION_SPACE, args)
-    replay_buffer = rb.MonolithicReplayBuffer(30_000)
-    actions = [0] * env.agents
+    network = Network(ACTION_SPACE, args) 
+    target =  Network(ACTION_SPACE, args)
+    replay_buffer = rb.MonolithicReplayBuffer(100_000)
+    actions = [0] * MAX_AGENTS
     epsilon = args.epsilon
-    returns = torch.zeros(100,dtype=torch.float32).to(Network.device)
+    returns = torch.zeros(200,dtype=torch.float32).to(Network.device)
     f = open("output.txt",'w')
+    # 0 channel for active agents
+    # 1 channel for inactive agents
+    # 2 channel for current agent
+    # 3 channel for objects
+    torch_state = torch.zeros(4, MAX_WIDTH, MAX_HEIGHT, dtype=torch.float32).to(Network.device)
+    started = False
     for ep in range(args.episodes): 
+        WIDTH,HEIGHT,OBJECTS,AGENTS = np.random.randint(3,MAX_WIDTH+1),np.random.randint(3,MAX_HEIGHT+1),np.random.randint(2,MAX_OBJECTS+1),np.random.randint(2,MAX_AGENTS+1)
+        env = foraging.ForagingEnvironment(WIDTH, HEIGHT, OBJECTS, AGENTS)
+        print(f"WIDTH: {WIDTH}, HEIGHT: {HEIGHT}, OBJECTS: {OBJECTS}, AGENTS: {AGENTS}")
         state = env.reset()
-        torch_state,grid_tensor,agents_loc = prepare_state(state, MAX_SIZE, MAXIMUM_AGENTS)
+        torch_state = prepare_state(env.agent_locations, env.object_locations, torch_state,MAX_AGENTS)
         R = 0
         while not env.done():
             every_agent_state = []
             for i in range(env.agents):
-                agent_id = torch.nn.functional.one_hot(torch.tensor(i),num_classes = MAXIMUM_AGENTS)
-                torch_state[-MAXIMUM_AGENTS:] = agent_id.float()
                 obj_loc = env.object_locations
                 ag_x,ag_y = env.agent_locations[i]
                 playable_actions = []
@@ -139,49 +150,78 @@ def main(args: argparse.Namespace) -> None:
                             playable_actions.append(a)
                 if (len(playable_actions) == 0):
                     playable_actions = [0,1,2,3]
-
+                # set current agent
+                torch_state[2,ag_x,ag_y] = 1
                 if np.random.uniform() < epsilon:
                     action_index = np.random.randint(len(playable_actions))
                     action = playable_actions[action_index]
-                    actions[i] = action
+                    #action = np.random.randint(ACTION_SPACE)
                 else:
                     q_values = network.predict(torch_state[np.newaxis])[0]
-                    actions_argsort = np.argsort(q_values)
-                    for act in actions_argsort:
-                        if act in playable_actions:
-                            action = act
-                            actions[i] = action
-                            break
+                    ## old code
+                    #action = torch.argmax(q_values[playable_actions])
+                    # actions_argsort = torch.argsort(input=q_values,descending=True)
+                    # for act in actions_argsort:
+                    #     if act in playable_actions:
+                    #         action = act
+                    #         actions[i] = action
+                    #         break
+                    # ## old code
+                    # q_values[playable_actions] += np.max(q_values)
+                    
+                    action = playable_actions[np.argmax(q_values[playable_actions])]
+                actions[i] = action
                 every_agent_state.append(torch_state.clone())
-                new_torch_state = env.perform_one_action(action,torch_state,grid_tensor.numel(),i,MAX_SIZE)
-                torch_state = new_torch_state
+
+                nag_x, nag_y = env.get_nag_xy(action, i)
+                # unset current agent
+                torch_state[2, ag_x, ag_y] = 0
+                # unset active agents
+                torch_state[0, ag_x, ag_y] -= (1 / MAX_AGENTS)
+                # set inactive agents
+                torch_state[1, nag_x, nag_y] += (1 / MAX_AGENTS)
+            ## end of agent loop ##
+
             reward, *next_state = env.perform_actions(actions)
+            #update obj loc
+            torch_state[3] = 0
+            for ob_x, ob_y, ob_val in env.object_locations:
+                torch_state[3, ob_x, ob_y] = ob_val / MAX_AGENTS
+            # move inactive agents to active
+            for nag_x,nag_y in env.agent_locations:
+                torch_state[1, nag_x, nag_y] -= (1 / MAX_AGENTS)
+                torch_state[0, nag_x, nag_y] += (1 / MAX_AGENTS)
+            ## add as current agent 0
+            ag_x,ag_y = env.agent_locations[0]
+            torch_state[2, ag_x, ag_y] = 1
             # compute next_torch_state
-            next_torch_state, next_grid_tensor,agents_loc = prepare_state(next_state, MAX_SIZE, MAXIMUM_AGENTS)
+            next_torch_state = torch_state
             # Compute per-agent reward
             per_agent_reward = reward / env.agents
-            ## REPLAY BUFFER APPEND
-            ## add into transition next attribute (whole_game_state and grid)
             for i in range(env.agents):
                 replay_buffer.append(Transition(state=every_agent_state[i].clone(), action=actions[i], reward=per_agent_reward, done=env.done(), next_state=next_torch_state.clone()))
             if len(replay_buffer) >= args.train_start:
+                if not started:
+                    started = True
+                    print("start training")
                 states, actions, rewards, dones, next_states = replay_buffer.sample(args.batch_size)
                 # Convert to tensors
                 states      = torch.from_numpy(states).float().to(Network.device)
                 actions     = torch.from_numpy(actions).long().to(Network.device)        # Use long for indexing
                 rewards     = torch.from_numpy(rewards).float().to(Network.device)
-                dones       = torch.from_numpy(dones).float().to(Network.device)
+                dones       = torch.from_numpy(dones).int().to(Network.device)
                 next_states = torch.from_numpy(next_states).float().to(Network.device)
+
+
                 next_q_values = target.predict(next_states)
                 targets = network.predict(states)
                 
-                targets[torch.arange(args.batch_size),actions] = rewards + args.gamma * torch.max(next_q_values,dim=1)[0] * (1 - dones.int())
+                targets[torch.arange(args.batch_size),actions] = rewards + args.gamma * torch.max(next_q_values,dim=1)[0] * (1 - dones)
                 network.train(states, targets, target._model,network._model)
             # update state,grid,
             torch_state = next_torch_state
-            grid_tensor = next_grid_tensor
             R += reward
-        returns[ep % 100] = R
+        returns[ep % 200] = R
         average_return = returns.mean().item()
         if args.epsilon_final_at:
             epsilon = np.interp(ep + 1, [0, args.epsilon_final_at], [args.epsilon, args.epsilon_final])

@@ -1,149 +1,25 @@
-<<<<<<< HEAD
-Finished with reward: -43.000000000000334, episode number: 1
-Finished with reward: -42.000000000000426, episode number: 2
-Finished with reward: -45.00000000000044, episode number: 3
-Finished with reward: -42.000000000000334, episode number: 4
-Finished with reward: -36.000000000000234, episode number: 5
-Finished with reward: -44.00000000000036, episode number: 6
-Finished with reward: -45.0000000000004, episode number: 7
-Finished with reward: -41.000000000000306, episode number: 8
-Finished with reward: -44.000000000000355, episode number: 9
-Finished with reward: -38.000000000000355, episode number: 10
-Finished with reward: -29.000000000000234, episode number: 11
-Finished with reward: -45.00000000000037, episode number: 12
-Finished with reward: -46.00000000000044, episode number: 13
-Finished with reward: -39.00000000000028, episode number: 14
-Finished with reward: -34.00000000000036, episode number: 15
-Finished with reward: -42.00000000000031, episode number: 16
-Finished with reward: -48.00000000000041, episode number: 17
-Finished with reward: -42.00000000000032, episode number: 18
-Finished with reward: -39.00000000000038, episode number: 19
-Finished with reward: -41.00000000000033, episode number: 20
-Finished with reward: -46.000000000000384, episode number: 21
-Finished with reward: -49.000000000000426, episode number: 22
-Finished with reward: -45.0000000000004, episode number: 23
-Finished with reward: -36.00000000000021, episode number: 24
-Finished with reward: -47.0000000000004, episode number: 25
-Finished with reward: -48.00000000000041, episode number: 26
-Finished with reward: -35.0000000000002, episode number: 27
-Finished with reward: -47.0000000000004, episode number: 28
-Finished with reward: -42.00000000000032, episode number: 29
-Finished with reward: -40.0000000000003, episode number: 30
-Finished with reward: -14.999999999999922, episode number: 31
-Finished with reward: -40.000000000000355, episode number: 32
-Finished with reward: -32.00000000000016, episode number: 33
-Finished with reward: -26.00000000000017, episode number: 34
-Finished with reward: -29.00000000000011, episode number: 35
-Finished with reward: -43.00000000000034, episode number: 36
-Finished with reward: -44.000000000000355, episode number: 37
-Finished with reward: -35.00000000000023, episode number: 38
-Finished with reward: -40.00000000000041, episode number: 39
-Finished with reward: -28.0000000000001, episode number: 40
-Finished with reward: -40.0000000000003, episode number: 41
-Finished with reward: -46.000000000000384, episode number: 42
-Finished with reward: -45.00000000000037, episode number: 43
-Finished with reward: -42.00000000000032, episode number: 44
-Finished with reward: -37.000000000000384, episode number: 45
-Finished with reward: -44.000000000000334, episode number: 46
-Finished with reward: -42.0000000000003, episode number: 47
-Finished with reward: -34.00000000000018, episode number: 48
-Finished with reward: -38.00000000000034, episode number: 49
-Finished with reward: -41.00000000000031, episode number: 50
-Finished with reward: -33.00000000000027, episode number: 51
-Finished with reward: -42.00000000000032, episode number: 52
-Finished with reward: -44.000000000000334, episode number: 53
-Finished with reward: -39.00000000000028, episode number: 54
-Finished with reward: -33.00000000000016, episode number: 55
-Finished with reward: -35.000000000000306, episode number: 56
-Finished with reward: -34.00000000000019, episode number: 57
-Finished with reward: -29.000000000000107, episode number: 58
-Finished with reward: -38.00000000000032, episode number: 59
-Finished with reward: -33.000000000000334, episode number: 60
-Finished with reward: -34.000000000000206, episode number: 61
-Finished with reward: -39.00000000000029, episode number: 62
-Finished with reward: -14.999999999999915, episode number: 63
-Finished with reward: -39.000000000000384, episode number: 64
-Finished with reward: -47.0000000000004, episode number: 65
-Finished with reward: -46.000000000000384, episode number: 66
-Finished with reward: -36.000000000000234, episode number: 67
-Finished with reward: -36.00000000000022, episode number: 68
-Finished with reward: -44.00000000000035, episode number: 69
-Finished with reward: -45.00000000000037, episode number: 70
-Finished with reward: -36.00000000000027, episode number: 71
-Finished with reward: -39.000000000000284, episode number: 72
-Finished with reward: -37.000000000000234, episode number: 73
-Finished with reward: -31.00000000000014, episode number: 74
-Finished with reward: -49.000000000000426, episode number: 75
-Finished with reward: -30.000000000000107, episode number: 76
-Finished with reward: -37.000000000000334, episode number: 77
-Finished with reward: -43.00000000000034, episode number: 78
-Finished with reward: -43.00000000000034, episode number: 79
-Finished with reward: -50.00000000000044, episode number: 80
-Finished with reward: -23.000000000000007, episode number: 81
-Finished with reward: -43.00000000000034, episode number: 82
-Finished with reward: -42.00000000000032, episode number: 83
-Finished with reward: -31.00000000000013, episode number: 84
-Finished with reward: -36.00000000000022, episode number: 85
-Finished with reward: -36.000000000000234, episode number: 86
-Finished with reward: -35.00000000000023, episode number: 87
-Finished with reward: -43.00000000000035, episode number: 88
-Finished with reward: -26.00000000000027, episode number: 89
-Finished with reward: -28.000000000000277, episode number: 90
-Finished with reward: -28.000000000000185, episode number: 91
-Finished with reward: -38.00000000000025, episode number: 92
-Finished with reward: -33.000000000000185, episode number: 93
-Finished with reward: -34.00000000000018, episode number: 94
-Finished with reward: -42.00000000000032, episode number: 95
-Finished with reward: -26.000000000000043, episode number: 96
-Finished with reward: -45.00000000000044, episode number: 97
-Finished with reward: -30.000000000000167, episode number: 98
-Finished with reward: -46.000000000000405, episode number: 99
-Finished with reward: -37.00000000000031, episode number: 100
-Finished with reward: -41.000000000000306, episode number: 101
-Finished with reward: -30.00000000000024, episode number: 102
-Finished with reward: -33.00000000000016, episode number: 103
-Finished with reward: -32.00000000000025, episode number: 104
-Finished with reward: -34.000000000000185, episode number: 105
-Finished with reward: -28.00000000000007, episode number: 106
-Finished with reward: -39.00000000000027, episode number: 107
-Finished with reward: -47.0000000000004, episode number: 108
-Finished with reward: -33.000000000000156, episode number: 109
-Finished with reward: -46.000000000000384, episode number: 110
-Finished with reward: -37.00000000000024, episode number: 111
-Finished with reward: -35.00000000000028, episode number: 112
-Finished with reward: -30.00000000000011, episode number: 113
-Finished with reward: -41.00000000000031, episode number: 114
-Finished with reward: -26.0000000000001, episode number: 115
-Finished with reward: -28.00000000000007, episode number: 116
-Finished with reward: -33.000000000000234, episode number: 117
-Finished with reward: -40.00000000000034, episode number: 118
-Finished with reward: -37.000000000000234, episode number: 119
-Finished with reward: -46.00000000000037, episode number: 120
-Finished with reward: -31.000000000000185, episode number: 121
-Finished with reward: -31.000000000000213, episode number: 122
-Finished with reward: -33.00000000000018, episode number: 123
-Finished with reward: -49.000000000000426, episode number: 124
-Finished with reward: -45.0000000000004, episode number: 125
-Finished with reward: -40.0000000000003, episode number: 126
-Finished with reward: -23.000000000000075, episode number: 127
-Finished with reward: -44.000000000000426, episode number: 128
-Finished with reward: -15.000000000000128, episode number: 129
-Finished with reward: -47.0000000000004, episode number: 130
-Finished with reward: -34.000000000000234, episode number: 131
-Finished with reward: -43.000000000000334, episode number: 132
-Finished with reward: -31.00000000000013, episode number: 133
-Finished with reward: -32.000000000000156, episode number: 134
-Finished with reward: -35.0000000000002, episode number: 135
-Finished with reward: -35.00000000000021, episode number: 136
-Finished with reward: -41.00000000000033, episode number: 137
-Finished with reward: -39.00000000000032, episode number: 138
-Finished with reward: -50.00000000000044, episode number: 139
-Finished with reward: -41.000000000000306, episode number: 140
-Finished with reward: -30.000000000000124, episode number: 141
-Finished with reward: -41.000000000000306, episode number: 142
-Finished with reward: -35.00000000000025, episode number: 143
-Finished with reward: -34.00000000000018, episode number: 144
-Finished with reward: -38.00000000000027, episode number: 145
-=======
-Finished with reward: -50.00000000000044, episode number: 1
->>>>>>> 55ebe28e4e302295895e4defc892979290b70760
+Finished with reward: 1.7000, average_return: 0.0085 episode number: 1 epsilon: 0.6993
+Finished with reward: 5.8000, average_return: 0.0375 episode number: 2 epsilon: 0.6987
+Finished with reward: -5.6000, average_return: 0.0095 episode number: 3 epsilon: 0.6980
+Finished with reward: 5.0000, average_return: 0.0345 episode number: 4 epsilon: 0.6973
+Finished with reward: 5.4000, average_return: 0.0615 episode number: 5 epsilon: 0.6966
+Finished with reward: 3.5000, average_return: 0.0790 episode number: 6 epsilon: 0.6960
+Finished with reward: 2.3000, average_return: 0.0905 episode number: 7 epsilon: 0.6953
+Finished with reward: -17.0000, average_return: 0.0055 episode number: 8 epsilon: 0.6946
+Finished with reward: -0.6000, average_return: 0.0025 episode number: 9 epsilon: 0.6940
+Finished with reward: 3.9000, average_return: 0.0220 episode number: 10 epsilon: 0.6933
+Finished with reward: 9.2000, average_return: 0.0680 episode number: 11 epsilon: 0.6926
+Finished with reward: 1.0000, average_return: 0.0730 episode number: 12 epsilon: 0.6920
+Finished with reward: -1.5000, average_return: 0.0655 episode number: 13 epsilon: 0.6913
+Finished with reward: 2.1000, average_return: 0.0760 episode number: 14 epsilon: 0.6906
+Finished with reward: 2.7000, average_return: 0.0895 episode number: 15 epsilon: 0.6899
+Finished with reward: 2.2000, average_return: 0.1005 episode number: 16 epsilon: 0.6893
+Finished with reward: 8.9000, average_return: 0.1450 episode number: 17 epsilon: 0.6886
+Finished with reward: 3.7000, average_return: 0.1635 episode number: 18 epsilon: 0.6879
+Finished with reward: -3.6000, average_return: 0.1455 episode number: 19 epsilon: 0.6873
+Finished with reward: 6.4000, average_return: 0.1775 episode number: 20 epsilon: 0.6866
+Finished with reward: 4.7000, average_return: 0.2010 episode number: 21 epsilon: 0.6859
+Finished with reward: 9.2000, average_return: 0.2470 episode number: 22 epsilon: 0.6853
+Finished with reward: 4.6000, average_return: 0.2700 episode number: 23 epsilon: 0.6846
+Finished with reward: 2.6000, average_return: 0.2830 episode number: 24 epsilon: 0.6839
+Finished with reward: 3.7000, average_return: 0.3015 episode number: 25 epsilon: 0.6832

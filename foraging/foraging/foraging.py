@@ -79,8 +79,7 @@ class ForagingEnvironment:
             self.world[ob_x][ob_y] = ob_l
 
         return reward - 0.1 # 0.1 is penalty for each step
-    def perform_one_action(self, action,torch_state,offset, agent_index,max_size):
-        # apply one action in the environment (move agent and collect objects)
+    def get_nag_xy(self,action,agent_index):
         ag_x, ag_y = self.agent_locations[agent_index]
         nag_x, nag_y = ag_x, ag_y
         if action == NORTH:
@@ -91,6 +90,10 @@ class ForagingEnvironment:
             nag_y = max(ag_y - 1, 0)
         if action == EAST:
             nag_y = min(ag_y + 1, self.w - 1)
+        return nag_x,nag_y
+    def perform_one_action(self, action,torch_state,offset, agent_index,max_size):
+        # apply one action in the environment (move agent and collect objects)
+        nag_x, nag_y = self.get_nag_xy(action,agent_index)
         temp_world = self._update_world_one_action(nag_x,nag_y,torch_state,offset,agent_index,max_size)
         return temp_world
     # apply the agents' actions in the environment (move agents and collect objects)
